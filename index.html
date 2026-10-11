@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#101a2c">
+<title>LD Night</title>
+<style>
+:root{--bg:#101a2c;--panel:#17263d;--line:#47617d;--gold:#ffd66b;--text:#f5f7ff;--green:#54d68b}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:Tahoma,Arial,sans-serif;touch-action:none}
+button,input,select{font:inherit}button{border:1px solid #66809e;border-radius:12px;background:#263d59;color:white;padding:10px 13px;font-weight:bold;box-shadow:0 3px 0 #0b1220}button:active{transform:translateY(2px);box-shadow:none}button.primary{background:#277c55;border-color:#6be3a0}button.gold{background:#8c6422;border-color:#ffdc7b}button.danger{background:#833d46}
+#game{position:absolute;inset:0;width:100%;height:100%;display:block;background:#8ec7df}
+#topbar{position:absolute;top:8px;left:8px;right:8px;display:flex;gap:6px;align-items:center;justify-content:space-between;pointer-events:none}
+.pill{pointer-events:auto;background:#101a2ce8;border:1px solid #ffffff3d;border-radius:12px;padding:7px 10px;font-size:12px;max-width:48vw}
+#toolbar{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:5px;max-width:96vw;overflow-x:auto;padding:6px;background:#101a2ce8;border:1px solid #ffffff33;border-radius:15px}
+.slot{min-width:48px;height:52px;padding:3px;font-size:10px;background:#26374b;position:relative}.slot.active{outline:3px solid var(--gold)}.slot b{display:block;font-size:18px}
+#controls{position:absolute;bottom:85px;left:12px;display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(2,48px);gap:4px}
+#controls button{padding:0;font-size:20px;background:#13243bdd;border-color:#b8d3ee88;touch-action:none}
+#actions{position:absolute;bottom:90px;right:12px;display:flex;flex-direction:column;gap:8px}
+#actions button{min-width:84px;min-height:45px;background:#13243bdd}
+#menu,#modal,#intro{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0b1424f5,#172d4bf2);padding:14px;overflow:auto}
+.card{width:min(560px,100%);max-height:94vh;overflow:auto;background:#182a43;border:2px solid #506b8b;border-radius:22px;padding:20px;box-shadow:0 18px 50px #0008}
+.logo{font-size:clamp(38px,9vw,66px);font-weight:1000;letter-spacing:2px;text-align:center;color:#fff;text-shadow:0 5px #315a87,0 8px #080e19;margin:8px 0}.logo span{color:#ffd66b}.subtitle{text-align:center;color:#c7d7ec;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.grid button{min-height:48px}.wide{width:100%;margin-top:8px}
+h2{margin:0 0 12px;color:var(--gold)}p{line-height:1.7;color:#d4e0ef}.field{display:block;margin:10px 0;color:#d4e0ef;font-size:14px}.field input,.field select{display:block;width:100%;padding:10px;margin-top:5px;border-radius:9px;border:1px solid #6c86a3;background:#0e1a2c;color:white}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:120px}.small{font-size:12px;color:#afc1d6}.hidden{display:none!important}.stat{height:9px;background:#31445a;border-radius:9px;overflow:hidden;margin-top:4px}.stat i{display:block;height:100%;background:#55df8d}.badges{display:flex;gap:6px;flex-wrap:wrap}.badge{padding:5px 8px;border-radius:8px;background:#243d59;font-size:12px}
+#toast{position:absolute;top:58px;left:50%;transform:translateX(-50%);background:#091321ed;border:1px solid #8faac6;border-radius:10px;padding:9px 13px;display:none;z-index:10}
+#modal{background:#07101ddd;z-index:8}.list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.list button{text-align:right}
+@media(min-width:900px){#controls{transform:scale(1.18);transform-origin:bottom left}#actions{transform:scale(1.12);transform-origin:bottom right}.card{padding:24px}}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="topbar" class="hidden">
+ <div class="pill"><b id="playerLabel">بازیکن</b><div>❤️ <span id="hpText">100</span> &nbsp; 🍗 <span id="foodText">100</span><div class="stat"><i id="hpBar" style="width:100%"></i></div></div></div>
+ <div class="pill" id="worldInfo">روز ۱ · خلاقانه</div>
+ <div class="pill">🧭 <span id="coords">0,0</span> <button id="pauseBtn" style="padding:4px 8px">☰</button></div>
+</div>
+<div id="toolbar" class="hidden"></div>
+<div id="controls" class="hidden">
+ <span></span><button data-move="up">▲</button><span></span>
+ <button data-move="left">◀</button><button data-move="down">▼</button><button data-move="right">▶</button>
+</div>
+<div id="actions" class="hidden">
+ <button id="mineBtn">⛏️ کندن</button><button id="placeBtn">🧱 گذاشتن</button><button id="useBtn">✋ استفاده</button><button id="jumpBtn">⬆️ پرش</button>
+</div>
+<div id="toast"></div>
+<div id="intro">
+ <div class="card"><div class="logo"><span>LD</span> NIGHT</div><div class="subtitle">دنیای بلوکیِ ماجراجویی تو</div><p id="introText" style="text-align:center">سلام Reza_Nightmare! به دنیای LD Night خوش اومدی. آماده‌ای دنیای خودت رو بسازی؟</p><button class="primary wide" id="skipIntro">شروع ماجراجویی 🚀</button><p class="small" style="text-align:center">برای رد کردن مقدمه، دکمه را بزن.</p></div>
+</div>
+<div id="menu" class="hidden">
+ <div class="card"><div class="logo"><span>LD</span> NIGHT</div><div class="subtitle">ساختن • بقا • ماجراجویی</div>
+ <div class="badges" style="justify-content:center;margin-bottom:12px"><span class="badge">📱 موبایل</span><span class="badge">📺 Android TV</span><span class="badge">💾 ذخیره محلی</span></div>
+ <div class="grid"><button class="primary" id="newWorld">🌎 دنیای جدید</button><button id="continueWorld">▶️ ادامه بازی</button><button id="settingsBtn">⚙️ تنظیمات</button><button id="inventoryBtn">🎒 وسایل و ساخت</button><button id="enchantBtn">✨ افسون ابزار</button><button id="vehicleBtn">🚙 خودروها</button><button id="weaponBtn">🛡️ تجهیزات ماجراجویی</button><button id="multiBtn">👥 چندنفره</button></div>
+ <p class="small">این نسخه، پروژهٔ قابل اجرا و توسعهٔ بازی است. چندنفرهٔ اینترنتی و بعضی امکانات پیشرفته به سرور و توسعهٔ جداگانه نیاز دارند.</p>
+ </div>
+</div>
+<div id="modal" class="hidden"><div class="card" id="modalCard"></div></div>
+<script>
+(()=>{
+const $=id=>document.getElementById(id), canvas=$('game'), ctx=canvas.getContext('2d');
+const tileNames={grass:'چمن',dirt:'خاک',stone:'سنگ',wood:'چوب',leaves:'برگ',sand:'شن',water:'آب',brick:'آجر',glass:'شیشه',lamp:'چراغ',iron:'آهن',obsidian:'ابسیدین',flower:'گل',plank:'تخته',coal:'زغال',ore:'سنگ معدن',road:'جاده'};
+const colors={grass:'#61b94e',dirt:'#92613b',stone:'#8b929b',wood:'#8a542b',leaves:'#27864a',sand:'#e6cf7c',water:'#3b9ce8',brick:'#b65c4a',glass:'#9be7ed',lamp:'#ffe17c',iron:'#c0c8d0',obsidian:'#392d59',flower:'#e9579a',plank:'#c78c4d',coal:'#343b43',ore:'#c18c62',road:'#666b73'};
+const emojis={grass:'🌿',dirt:'🟫',stone:'🪨',wood:'🪵',leaves:'🍃',sand:'🏖️',water:'💧',brick:'🧱',glass:'🔹',lamp:'💡',iron:'⚙️',obsidian:'🟪',flower:'🌼',plank:'🪚',coal:'⚫',ore:'💎',road:'🛣️',pickaxe:'⛏️',axe:'🪓',sword:'⚔️',bread:'🍞',car:'🚙',bike:'🏍️',tank:'🛡️',radio:'📻',armor:'🦺',key:'🔑'};
+const itemOrder=['grass','dirt','stone','wood','leaves','sand','water','brick','glass','lamp','iron','obsidian','flower','plank','coal','ore','pickaxe','axe','sword','bread'];
+let state={x:0,y:0,mode:'creative',day:1,tick:0,hp:100,food:100,name:'Reza_Nightmare',selected:'grass',inv:{grass:30,dirt:30,stone:20,wood:20,leaves:12,sand:20,water:10,brick:10,glass:8,lamp:5,iron:8,obsidian:4,flower:5,plank:12,coal:8,ore:5,pickaxe:1,axe:1,sword:1,bread:5},world:{},vehicle:null,weapon:'sword',enchant:{},size:48,lang:'فارسی',quality:'بالا',started:false};
+let keys={}, last=0, view={x:0,y:0}, isDriving=false;
+const key=(x,y)=>x+','+y;
+function terrain(x,y){let n=Math.sin(x*12.989+y*78.233)*43758.5453;n=n-Math.floor(n);if(n<.035)return 'water';if(n<.08)return 'sand';if(n<.11)return 'stone';return 'grass'}
+function getTile(x,y){let k=key(x,y);if(state.world[k])return state.world[k];return terrain(x,y)}
+function setTile(x,y,t){state.world[key(x,y)]=t}
+function resize(){canvas.width=innerWidth*devicePixelRatio;canvas.height=innerHeight*devicePixelRatio;ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)}
+addEventListener('resize',resize);resize();
+function iso(x,y){let w=state.size,h=state.size*.55;return {x:innerWidth/2+(x-state.x)*w*.9-(y-state.y)*w*.9,y:innerHeight/2+(x-state.x)*h+(y-state.y)*h}}
+function drawDiamond(px,py,w,h,c){ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(px,py-h/2);ctx.lineTo(px+w/2,py);ctx.lineTo(px,py+h/2);ctx.lineTo(px-w/2,py);ctx.closePath();ctx.fill();ctx.strokeStyle='#10271922';ctx.stroke()}
+function drawBlock(x,y,t){let p=iso(x,y),w=state.size*.9,h=state.size*.5,z=state.size*.34;let c=colors[t]||'#777';drawDiamond(p.x,p.y,w,h,c);if(t!=='water'&&t!=='flower'&&t!=='road'){ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(p.x-w/2,p.y);ctx.lineTo(p.x,p.y+h/2);ctx.lineTo(p.x,p.y+h/2+z);ctx.lineTo(p.x-w/2,p.y+z);ctx.closePath();ctx.fill();ctx.fillStyle=shade(c,.78);ctx.beginPath();ctx.moveTo(p.x+w/2,p.y);ctx.lineTo(p.x,p.y+h/2);ctx.lineTo(p.x,p.y+h/2+z);ctx.lineTo(p.x+w/2,p.y+z);ctx.closePath();ctx.fill()}if(t==='wood'){ctx.fillStyle='#4e2d1d';ctx.fillRect(p.x-3,p.y-10,6,19)}if(t==='leaves'){ctx.font='20px sans-serif';ctx.textAlign='center';ctx.fillText('🌳',p.x,p.y+3)}if(t==='flower'){ctx.font='19px sans-serif';ctx.textAlign='center';ctx.fillText('🌼',p.x,p.y+4)}if(t==='lamp'){ctx.font='20px sans-serif';ctx.textAlign='center';ctx.fillText('💡',p.x,p.y+4)}if(t==='water'){ctx.strokeStyle='#b6ecff88';ctx.beginPath();ctx.moveTo(p.x-w*.25,p.y);ctx.lineTo(p.x,p.y-h*.15);ctx.lineTo(p.x+w*.2,p.y);ctx.stroke()}}
+function shade(hex,f){let n=parseInt(hex.slice(1),16),r=Math.floor(((n>>16)&255)*f),g=Math.floor(((n>>8)&255)*f),b=Math.floor((n&255)*f);return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('')}
+function render(){ctx.clearRect(0,0,innerWidth,innerHeight);let night=(state.tick%1800)/1800;let sky=night>.65?'#172746':night>.5?'#bb7c69':'#8ec7df';ctx.fillStyle=sky;ctx.fillRect(0,0,innerWidth,innerHeight);let range=Math.ceil(innerWidth/(state.size*.75))+4;for(let y=state.y-range;y<=state.y+range;y++)for(let x=state.x-range;x<=state.x+range;x++)drawBlock(x,y,getTile(x,y));let p=iso(state.x,state.y);ctx.textAlign='center';ctx.font='30px sans-serif';ctx.fillText(isDriving?(state.vehicle==='car'?'🚙':state.vehicle==='bike'?'🏍️':'🛡️'):'🧑‍🚀',p.x,p.y-8);ctx.font='11px Tahoma';ctx.fillStyle='#fff';ctx.fillText(state.name.slice(0,24),p.x,p.y-32);if(night>.65){ctx.fillStyle='#07112655';ctx.fillRect(0,0,innerWidth,innerHeight)}requestAnimationFrame(render)}
+function toast(t){$('toast').textContent=t;$('toast').style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').style.display='none',1900)}
+function save(){try{localStorage.setItem('ldnight_save',JSON.stringify(state));toast('💾 دنیای تو ذخیره شد')}catch(e){toast('ذخیره‌سازی در دسترس نیست')}}
+function load(){try{let s=JSON.parse(localStorage.getItem('ldnight_save'));if(s){state={...state,...s};return true}}catch(e){}return false}
+function showGame(){['menu','intro'].forEach(x=>$(x).classList.add('hidden'));['topbar','toolbar','controls','actions'].forEach(x=>$(x).classList.remove('hidden'));state.started=true;updateUI()}
+function updateUI(){$('playerLabel').textContent=state.name;$('hpText').textContent=state.hp;$('foodText').textContent=state.food;$('hpBar').style.width=state.hp+'%';$('worldInfo').textContent='روز '+state.day+' · '+(state.mode==='creative'?'خلاقانه':'بقا');$('coords').textContent=state.x+','+state.y;renderToolbar()}
+function renderToolbar(){let el=$('toolbar');el.innerHTML='';itemOrder.slice(0,9).forEach(t=>{let b=document.createElement('button');b.className='slot '+(state.selected===t?'active':'');b.innerHTML='<b>'+(emojis[t]||'🧱')+'</b>'+tileNames[t]||t;b.title=tileNames[t]||t;b.onclick=()=>{state.selected=t;renderToolbar()};el.appendChild(b)})}
+function move(d){let [dx,dy]=({up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]})[d];let nx=state.x+dx,ny=state.y+dy;if(getTile(nx,ny)==='water'&&state.mode==='survival'){toast('برای عبور از آب راه دیگری پیدا کن');return}state.x=nx;state.y=ny;state.tick+=8;if(state.mode==='survival'){state.food=Math.max(0,state.food-1);if(state.food===0)state.hp=Math.max(1,state.hp-1)}if(state.tick%1800<8)state.day++;updateUI()}
+document.querySelectorAll('[data-move]').forEach(b=>{let timer;const go=()=>move(b.dataset.move);b.addEventListener('pointerdown',e=>{e.preventDefault();go();timer=setInterval(go,180)});['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>clearInterval(timer)))});
+function target(){return {x:state.x,y:state.y-1}}
+$('mineBtn').onclick=()=>{let t=target(),old=getTile(t.x,t.y);if(state.mode==='survival'&&old==='water'){toast('آب را نمی‌توان کند');return}setTile(t.x,t.y,'dirt');state.inv[old]=(state.inv[old]||0)+1;toast('کندی: '+(tileNames[old]||old));updateUI();save()};
+$('placeBtn').onclick=()=>{let t=target(),it=state.selected;if(!colors[it]){toast('این وسیله بلوک نیست');return}if(state.mode==='survival'&&(state.inv[it]||0)<=0){toast('از این بلوک نداری');return}setTile(t.x,t.y,it);if(state.mode==='survival')state.inv[it]--;updateUI()};
+$('useBtn').onclick=()=>{let it=state.selected;if(it==='bread'){state.food=Math.min(100,state.food+25);state.inv.bread=Math.max(0,(state.inv.bread||0)-1);toast('🍞 غذا خوردی')}else if(it==='lamp'){let t=target();setTile(t.x,t.y,'lamp');toast('چراغ روشن شد')}else if(it==='pickaxe'||it==='axe'||it==='sword'){toast((tileNames[it]||it)+' آماده است!')}else{toast('وسیله انتخابی: '+(tileNames[it]||it))}updateUI()};
+$('jumpBtn').onclick=()=>{state.tick+=35;toast('پرش!');};
+$('pauseBtn').onclick=()=>{openModal('منوی بازی',`<div class="grid"><button id="resume">▶ ادامه</button><button id="saveNow">💾 ذخیره دنیا</button><button id="openSettings">⚙️ تنظیمات</button><button id="backMenu" class="danger">🏠 منوی اصلی</button></div>`);$('resume').onclick=closeModal;$('saveNow').onclick=save;$('openSettings').onclick=settings;$('backMenu').onclick=()=>{closeModal();['topbar','toolbar','controls','actions'].forEach(x=>$(x).classList.add('hidden'));$('menu').classList.remove('hidden')}}
+function openModal(title,html){$('modalCard').innerHTML='<h2>'+title+'</h2>'+html+'<button class="wide" id="closeModal">بستن ✖</button>';$('modal').classList.remove('hidden');$('closeModal').onclick=closeModal}
+function closeModal(){$('modal').classList.add('hidden')}
+function settings(){openModal('⚙️ تنظیمات',`<label class="field">نام بازیکن (حداکثر ۲۰۰ نویسه)<input id="nameInput" maxlength="200" value="${esc(state.name)}"><span class="small" id="count">${state.name.length}/200</span></label><label class="field">کیفیت گرافیک<select id="quality"><option>کم</option><option>متوسط</option><option>بالا</option><option>خیلی بالا</option></select></label><label class="field">اندازه دکمه‌ها <input id="sizeRange" type="range" min="36" max="72" value="${state.size}"></label><label class="field">زبان<select id="lang"><option>فارسی</option><option>English</option><option>العربية</option><option>Türkçe</option><option>Русский</option><option>中文</option><option>日本語</option><option>한국어</option><option>हिन्दी</option><option>Français</option><option>Deutsch</option><option>Español</option></select></label><button class="primary wide" id="applySettings">ذخیره تنظیمات</button><p class="small">تنظیمات زبان در این نسخه روی منوهای اصلی به‌صورت کامل ترجمه نشده‌اند.</p>`);$('quality').value=state.quality;$('lang').value=state.lang;$('nameInput').oninput=()=> $('count').textContent=$('nameInput').value.length+'/200';$('applySettings').onclick=()=>{state.name=$('nameInput').value||'بازیکن';state.quality=$('quality').value;state.size=+$('sizeRange').value;state.lang=$('lang').value;closeModal();updateUI();save()}}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function inventory(){let html='<p>بلوک‌ها و ابزارها</p><div class="list">'+Object.keys(state.inv).map(k=>`<button data-item="${k}">${emojis[k]||'📦'} ${tileNames[k]||k} — ${state.inv[k]}</button>`).join('')+'</div><hr><h2>🛠️ میز ساخت</h2><div class="list"><button data-craft="plank">🪵 ۱ چوب → ۴ تخته</button><button data-craft="brick">🧱 ۴ خاک → ۱ آجر</button><button data-craft="lamp">💡 ۲ سنگ + ۱ آهن → چراغ</button><button data-craft="pickaxe">⛏️ ۳ چوب + ۲ آهن → کلنگ</button><button data-craft="axe">🪓 ۲ چوب + ۲ آهن → تبر</button><button data-craft="sword">⚔️ ۱ چوب + ۳ آهن → شمشیر</button><button data-craft="bread">🍞 ۳ گل → نان (نمادین)</button></div>';
+openModal('🎒 کوله‌پشتی و ساخت',html);$('modalCard').querySelectorAll('[data-item]').forEach(b=>b.onclick=()=>{state.selected=b.dataset.item;closeModal();updateUI();toast('انتخاب شد: '+(tileNames[state.selected]||state.selected))});$('modalCard').querySelectorAll('[data-craft]').forEach(b=>b.onclick=()=>craft(b.dataset.craft))}
+function craft(it){let cost={plank:{wood:1},brick:{dirt:4},lamp:{stone:2,iron:1},pickaxe:{wood:3,iron:2},axe:{wood:2,iron:2},sword:{wood:1,iron:3},bread:{flower:3}}[it];if(state.mode==='survival'&&Object.entries(cost).some(([k,v])=>(state.inv[k]||0)<v)){toast('مواد کافی نداری');return}if(state.mode==='survival')Object.entries(cost).forEach(([k,v])=>state.inv[k]-=v);state.inv[it]=(state.inv[it]||0)+(it==='plank'?4:1);toast('ساختی: '+(tileNames[it]||it));inventory();updateUI();save()}
+function enchant(){openModal('✨ افسون ابزار',`<p>ابزار را انتخاب کن و سطح افسون را تا ۱۰۰۰ بالا ببر.</p><label class="field">ابزار<select id="enchItem"><option value="pickaxe">کلنگ ⛏️</option><option value="axe">تبر 🪓</option><option value="sword">شمشیر ⚔️</option></select></label><label class="field">نوع افسون<select id="enchType"><option>قدرت</option><option>سرعت</option><option>دوام</option><option>بخت</option></select></label><label class="field">سطح (۱ تا ۱۰۰۰)<input id="enchLevel" type="number" min="1" max="1000" value="10"></label><button class="primary wide" id="applyEnch">اعمال افسون</button><div id="enchResult"></div>`);$('applyEnch').onclick=()=>{let n=Math.max(1,Math.min(1000,parseInt($('enchLevel').value)||1)),it=$('enchItem').value,type=$('enchType').value;state.enchant[it]={type,level:n};$('enchResult').innerHTML='<p>✨ '+it+' — '+type+' '+roman(n)+' <span class="small">('+n+')</span></p>';save()}}
+function roman(n){if(n>3999)return 'Lvl '+n;let out='';[[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']].forEach(([v,s])=>{while(n>=v){out+=s;n-=v}});return out}
+function vehicles(){openModal('🚙 گاراژ خودروها',`<p>وسیله‌ای برای گشت‌وگذار انتخاب کن. کنترل‌ها در این نسخه شبیه‌سازی ساده هستند.</p><div class="list"><button data-vehicle="car">🚙 خودروی قدیمی</button><button data-vehicle="bike">🏍️ موتور جدید</button><button data-vehicle="tank">🛡️ خودروی زرهی خیالی</button></div><p>کلید خودرو و رادیو نمایشی هستند.</p><div class="list"><button id="carKey">🔑 قفل / بازکردن</button><button id="radio">📻 روشن / خاموش رادیو</button><button id="engine">⚡ روشن‌کردن موتور</button><button id="roof">🌤️ بازکردن سقف</button></div><div id="vehicleInfo"></div>`);$('modalCard').querySelectorAll('[data-vehicle]').forEach(b=>b.onclick=()=>{state.vehicle=b.dataset.vehicle;isDriving=true;$('vehicleInfo').innerHTML='<p>وسیله انتخاب‌شده: '+emojis[state.vehicle]+' '+state.vehicle+' · سرعت: 0 km/h</p>';toast('سوار وسیله شدی');});['carKey','radio','engine','roof'].forEach(id=>$(id).onclick=()=>toast(({carKey:'قفل خودرو تغییر کرد',radio:'رادیوی بازی روشن/خاموش شد',engine:'موتور روشن شد',roof:'سقف باز شد'})[id]))}
+function weapons(){openModal('🛡️ تجهیزات ماجراجویی',`<p>تجهیزات خیالی بازی؛ بدون جزئیات واقعی ساخت یا استفاده.</p><div class="list"><button data-gear="sword">⚔️ شمشیر فانتزی</button><button data-gear="armor">🦺 زره</button><button data-gear="radio">📻 بی‌سیم</button><button data-gear="grenade">💫 گوی انرژی کارتونی</button><button data-gear="blaster">🔆 تفنگ لیزری خیالی</button><button data-gear="ammo">♾️ مهمات نامحدود (خلاقانه)</button></div><div id="gearInfo"></div>`);$('modalCard').querySelectorAll('[data-gear]').forEach(b=>b.onclick=()=>{$('gearInfo').innerHTML='<p>تجهیز انتخاب شد: '+b.textContent+' — در این نسخه نمایشی است.</p>';toast('تجهیز انتخاب شد')})}
+function multiplayer(){openModal('👥 چندنفره',`<p>بخش لابی و کد اتاق برای آماده‌سازی بازی آنلاین است. اتصال واقعی از راه دور به سرور بازی نیاز دارد؛ این پروژه فعلاً سرور آنلاین ندارد.</p><label class="field">نام اتاق<input id="roomName" maxlength="30" value="LD Night Friends"></label><label class="field">کد سه‌رقمی اتاق<input id="roomCode" inputmode="numeric" maxlength="3" placeholder="مثلاً 247"></label><label class="field">تعداد بازیکن‌ها<select id="roomSize"><option>2</option><option>4</option><option>6</option><option>8</option><option>10</option></select></label><button class="primary wide" id="createRoom">ساخت لابی محلی</button><div id="roomResult"></div>`);$('createRoom').onclick=()=>{let c=$('roomCode').value.replace(/\D/g,'').slice(0,3)||String(Math.floor(100+Math.random()*900));$('roomResult').innerHTML='<p>لابی محلی آماده شد: '+esc($('roomName').value)+' · کد '+c+' · ظرفیت '+$('roomSize').value+' نفر</p><p class="small">این کد فعلاً روی همین دستگاه نمایشی است و بازیکن دیگری را به اینترنت وصل نمی‌کند. شماره تلفن وارد نکن.</p>'}}
+$('settingsBtn').onclick=settings;$('inventoryBtn').onclick=inventory;$('enchantBtn').onclick=enchant;$('vehicleBtn').onclick=vehicles;$('weaponBtn').onclick=weapons;$('multiBtn').onclick=multiplayer;
+$('newWorld').onclick=()=>{state.x=0;state.y=0;state.day=1;state.tick=0;state.hp=100;state.food=100;state.world={};state.mode='creative';showGame();save();toast('دنیای تازه ساخته شد')};
+$('continueWorld').onclick=()=>{if(!load())toast('هنوز دنیای ذخیره‌شده‌ای نیست');showGame();updateUI()};
+$('skipIntro').onclick=()=>{$('intro').classList.add('hidden');$('menu').classList.remove('hidden')};
+if('speechSynthesis'in window){setTimeout(()=>{try{let u=new SpeechSynthesisUtterance('سلام رضا نایت‌میر، به دنیای ال دی نایت خوش آمدی.');u.lang='fa-IR';speechSynthesis.speak(u)}catch(e){}},500)}
+// Long-press mode toggle
+$('worldInfo').addEventListener('click',()=>{state.mode=state.mode==='creative'?'survival':'creative';toast('حالت: '+(state.mode==='creative'?'خلاقانه':'بقا'));updateUI();save()});
+addEventListener('keydown',e=>{if(e.key==='ArrowUp'||e.key==='w')move('up');if(e.key==='ArrowDown'||e.key==='s')move('down');if(e.key==='ArrowLeft'||e.key==='a')move('left');if(e.key==='ArrowRight'||e.key==='d')move('right');if(e.key===' ')$('jumpBtn').click();if(e.key==='Escape')closeModal()});
+render();
+})();
+</script>
+</body></html>
